@@ -94,23 +94,20 @@ async def handle_photo(message: Message, bot: Bot) -> None:
         
         logger.info(f"Downloaded photo: {len(image_data)} bytes")
         
-        # Extract data using OCR
+                # Extract data using OCR
         invoice = await ocr_service.extract_from_image(image_data)
         
-        # Validate calculations
-        validator.validate(invoice)
-        
-        # Check for OCR failure (no data extracted at all)
+        # Check for OCR failure first
         if not invoice.items:
-            error_text = invoice.validation_message or "فشل في استخراج البيانات من الصورة"
-            # Escape for MarkdownV2
-            for char in ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']:
-                error_text = error_text.replace(char, f'\\{char}')
             await processing_msg.edit_text(
-                f"❌  *حدث خطأ\\!*\n\n{error_text}",
+                "❌  *حدث خطأ\\!*\n\n"
+                "فشل في استخراج البيانات من الصورة",
                 parse_mode="MarkdownV2"
             )
             return
+        
+        # Validate calculations (only if we have items)
+        validator.validate(invoice)
         
         # Format and send result
         result_text = format_invoice_result(invoice)
