@@ -1,0 +1,29 @@
+# Virtual Environment
+venv/
+.venv/
+
+# Environment Variables (SECRETS!)
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temp files
+temp/
+*.tmp

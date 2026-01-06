@@ -1,0 +1,3 @@
+"""
+FatoorahBot - Bot Package
+"""
