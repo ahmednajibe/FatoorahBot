@@ -104,10 +104,11 @@ class OCRService:
             
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse JSON: {e}")
-            return InvoiceData(validation_message="فشل في تحليل البيانات المستخرجة")            
+            return InvoiceData()            
         except Exception as e:
             logger.error(f"OCR extraction failed: {e}")
-            return InvoiceData(validation_message="حدث خطأ أثناء تحليل الصورة")
+            # Return empty invoice without validation message (will be handled by handler)
+            return InvoiceData()
 
 # Global instance
 ocr_service = OCRService()
