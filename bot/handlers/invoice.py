@@ -98,10 +98,14 @@ async def handle_photo(message: Message, bot: Bot) -> None:
         # Validate calculations
         validator.validate(invoice)
         
-        # Check for errors
-        if invoice.validation_message and not invoice.supplier_name:
+        # Check for OCR failure (no data extracted)
+        if not invoice.items and not invoice.supplier_name:
+            error_text = invoice.validation_message or "فشل في استخراج البيانات"
+            # Escape for MarkdownV2
+            for char in ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']:
+                error_text = error_text.replace(char, f'\\{char}')
             await processing_msg.edit_text(
-                f"❌  *حدث خطأ\\!*\n\n{invoice.validation_message}",
+                f"❌  *حدث خطأ\\!*\n\n{error_text}",
                 parse_mode="MarkdownV2"
             )
             return
