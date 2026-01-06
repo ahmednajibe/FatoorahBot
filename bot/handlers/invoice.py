@@ -64,7 +64,9 @@ def format_invoice_result(invoice) -> str:
             "",
             "━━━━━━━━━━━━━━━━━━━━",
             "",
-            f"{escape(invoice.validation_message)}",
+            "📊  *التدقيق الحسابي:*",
+        "",
+        f"    {escape(invoice.validation_message)}",
     ])
     
     return "\n".join(lines)
