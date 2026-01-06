@@ -7,6 +7,7 @@ from aiogram import Router, F, Bot
 from aiogram.types import Message
 
 from services.ocr_service import ocr_service
+from services.validator import validator
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -56,6 +57,15 @@ def format_invoice_result(invoice) -> str:
         f"    الضريبة: {escape(invoice.tax_amount)}",
         f"    *الإجمالي النهائي: {escape(invoice.total_amount)}*",
     ])
+
+    # Add validation message if present
+    if invoice.validation_message:
+        lines.extend([
+            "",
+            "━━━━━━━━━━━━━━━━━━━━",
+            "",
+            f"{escape(invoice.validation_message)}",
+    ])
     
     return "\n".join(lines)
 
@@ -84,6 +94,9 @@ async def handle_photo(message: Message, bot: Bot) -> None:
         
         # Extract data using OCR
         invoice = await ocr_service.extract_from_image(image_data)
+        
+        # Validate calculations
+        validator.validate(invoice)
         
         # Check for errors
         if invoice.validation_message and not invoice.supplier_name:
