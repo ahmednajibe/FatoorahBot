@@ -30,10 +30,7 @@ async def main() -> None:
     settings.validate()
     
     # Initialize bot with token
-    bot = Bot(
-        token=settings.TELEGRAM_BOT_TOKEN,
-        default=DefaultBotProperties(parse_mode=ParseMode.MARKDOWN_V2)
-    )
+    bot = Bot(token=settings.TELEGRAM_BOT_TOKEN)
     
     # Initialize dispatcher
     dp = Dispatcher()

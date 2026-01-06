@@ -48,6 +48,7 @@ class OCRService:
             }
         ],
         "subtotal": 0.0,
+        "discount": 0.0,
         "tax_amount": 0.0,
         "total_amount": 0.0
     }
@@ -91,6 +92,7 @@ class OCRService:
                 invoice_number=data.get("invoice_number", ""),
                 invoice_date=data.get("invoice_date", ""),
                 subtotal=float(data.get("subtotal", 0)),
+                discount=float(data.get("discount", 0)),
                 tax_amount=float(data.get("tax_amount", 0)),
                 total_amount=float(data.get("total_amount", 0)),
             )

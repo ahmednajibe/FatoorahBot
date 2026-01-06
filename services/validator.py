@@ -25,7 +25,7 @@ class ValidationService:
         """
         Validate invoice calculations.
         
-        Formula: Σ(item.unit_price × item.quantity) + tax = total
+        Formula: Σ(item.unit_price × item.quantity) - discount + tax = total
         
         Returns:
             (is_valid, message)
@@ -37,8 +37,8 @@ class ValidationService:
                 for item in invoice.items
             )
             
-            # Calculate expected total
-            calculated_total = calculated_subtotal + invoice.tax_amount
+            # Calculate expected total (subtotal - discount + tax)
+            calculated_total = calculated_subtotal - invoice.discount + invoice.tax_amount
             
             # Check subtotal
             subtotal_diff = abs(calculated_subtotal - invoice.subtotal)
@@ -49,6 +49,7 @@ class ValidationService:
             logger.info(
                 f"Validation: calculated_subtotal={calculated_subtotal:.2f}, "
                 f"invoice_subtotal={invoice.subtotal:.2f}, "
+                f"discount={invoice.discount:.2f}, "
                 f"diff={subtotal_diff:.2f}"
             )
             

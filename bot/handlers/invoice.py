@@ -3,11 +3,16 @@ Invoice Handler
 Handles invoice images and PDF files
 """
 import logging
+from datetime import datetime
 from aiogram import Router, F, Bot
-from aiogram.types import Message
+from aiogram.types import Message, BufferedInputFile, CallbackQuery
+from aiogram.fsm.context import FSMContext
 
 from services.ocr_service import ocr_service
 from services.validator import validator
+from services.excel_generator import excel_generator
+from bot.keyboards.invoice_keyboard import get_invoice_confirmation_keyboard, get_edit_menu_keyboard, get_totals_edit_keyboard
+from bot.states.invoice_states import InvoiceStates
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -54,6 +59,7 @@ def format_invoice_result(invoice) -> str:
         "💰  *الإجماليات:*",
         "",
         f"    المجموع الفرعي: {escape(invoice.subtotal)}",
+        f"    الخصم: {escape(invoice.discount)}",
         f"    الضريبة: {escape(invoice.tax_amount)}",
         f"    *الإجمالي النهائي: {escape(invoice.total_amount)}*",
     ])
@@ -73,7 +79,7 @@ def format_invoice_result(invoice) -> str:
 
 
 @router.message(F.photo)
-async def handle_photo(message: Message, bot: Bot) -> None:
+async def handle_photo(message: Message, bot: Bot, state: FSMContext) -> None:
     """Handle incoming photo messages."""
     
     # Send processing message
@@ -94,7 +100,7 @@ async def handle_photo(message: Message, bot: Bot) -> None:
         
         logger.info(f"Downloaded photo: {len(image_data)} bytes")
         
-                # Extract data using OCR
+        # Extract data using OCR
         invoice = await ocr_service.extract_from_image(image_data)
         
         # Check for OCR failure first
@@ -109,9 +115,20 @@ async def handle_photo(message: Message, bot: Bot) -> None:
         # Validate calculations (only if we have items)
         validator.validate(invoice)
         
-        # Format and send result
+        # Format and send result with confirmation buttons
         result_text = format_invoice_result(invoice)
-        await processing_msg.edit_text(result_text, parse_mode="MarkdownV2")
+        await processing_msg.edit_text(
+            result_text,
+            parse_mode="MarkdownV2",
+            reply_markup=get_invoice_confirmation_keyboard()
+        )
+        
+        # Store invoice data in state for later use
+        await state.set_state(InvoiceStates.waiting_confirmation)
+        await state.update_data(
+            invoice_data=invoice,
+            message_id=processing_msg.message_id
+        )
         
     except Exception as e:
         logger.error(f"Error processing photo: {e}")

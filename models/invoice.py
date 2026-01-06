@@ -32,6 +32,7 @@ class InvoiceData:
     
     # Totals
     subtotal: float = 0.0
+    discount: float = 0.0
     tax_amount: float = 0.0
     total_amount: float = 0.0
     
