@@ -60,7 +60,7 @@ def format_invoice_result(invoice) -> str:
         "",
         f"    المجموع الفرعي: {escape(invoice.subtotal)}",
         f"    الخصم: {escape(invoice.discount)}",
-        f"    الضريبة: {escape(invoice.tax_amount)}",
+        f"    الضريبة \\({escape(invoice.tax_rate)}%\\): {escape(invoice.tax_amount)}",
         f"    *الإجمالي النهائي: {escape(invoice.total_amount)}*",
     ])
 
@@ -127,7 +127,8 @@ async def handle_photo(message: Message, bot: Bot, state: FSMContext) -> None:
         await state.set_state(InvoiceStates.waiting_confirmation)
         await state.update_data(
             invoice_data=invoice,
-            message_id=processing_msg.message_id
+            message_id=processing_msg.message_id,
+            photo_message_id=message.message_id  # Save original photo message ID
         )
         
     except Exception as e:

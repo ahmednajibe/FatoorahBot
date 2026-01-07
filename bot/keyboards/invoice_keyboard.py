@@ -47,7 +47,7 @@ def get_totals_edit_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [
             InlineKeyboardButton(text="📝 الخصم", callback_data="edit_discount"),
-            InlineKeyboardButton(text="📝 الضريبة", callback_data="edit_tax")
+            InlineKeyboardButton(text="📝 نسبة الضريبة", callback_data="edit_tax_rate")
         ],
         [
             InlineKeyboardButton(text="🔙 رجوع", callback_data="invoice_edit")

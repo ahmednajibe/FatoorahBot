@@ -17,8 +17,7 @@ class InvoiceStates(StatesGroup):
     editing_tax_number = State()
     editing_subtotal = State()
     editing_discount = State()
-    editing_tax = State()
-    editing_total = State()
+    editing_tax_rate = State()  # For tax rate percentage
     
     # Item edit states
     editing_item_name = State()

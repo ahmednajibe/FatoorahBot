@@ -49,12 +49,14 @@ class OCRService:
         ],
         "subtotal": 0.0,
         "discount": 0.0,
+        "tax_rate": 0.0,
         "tax_amount": 0.0,
         "total_amount": 0.0
     }
 
     تعليمات مهمة:
     - ⚠️ **اقرأ الأرقام بعناية فائقة** - تحقق من كل رقم مرتين
+    - tax_rate هي نسبة الضريبة (مثلاً 15 تعني 15%)
     - إذا كان الرقم غير واضح، حاول استنتاجه من سياق الفاتورة
     - إذا لم تجد قيمة معينة، اتركها فارغة أو 0
     - الأرقام يجب أن تكون أرقام وليست نصوص
@@ -93,6 +95,7 @@ class OCRService:
                 invoice_date=data.get("invoice_date", ""),
                 subtotal=float(data.get("subtotal", 0)),
                 discount=float(data.get("discount", 0)),
+                tax_rate=float(data.get("tax_rate", 0)),
                 tax_amount=float(data.get("tax_amount", 0)),
                 total_amount=float(data.get("total_amount", 0)),
             )

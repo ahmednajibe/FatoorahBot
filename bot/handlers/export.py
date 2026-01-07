@@ -199,14 +199,13 @@ async def show_stats(message: Message, state: FSMContext):
     try:
         invoice_count = db_service.get_invoice_count(user_id)
         await message.answer(
-            f"📊 *إحصائياتك:*\n\n"
+            f"📊 إحصائياتك:\n\n"
             f"عدد الفواتير المحفوظة: {invoice_count}\n\n"
-            f"💡 *الأوامر المتاحة:*\n"
-            f"• `/export_invoices` - تصدير كل الفواتير\n"
-            f"• `/export_invoices_date` - تصدير فواتير بتاريخ محدد\n"
-            f"• `/export_items` - تصدير كل الأصناف\n"
-            f"• `/export_items_date` - تصدير أصناف بتاريخ محدد",
-            parse_mode="Markdown"
+            f"💡 الأوامر المتاحة:\n"
+            f"• /export_invoices - تصدير كل الفواتير\n"
+            f"• /export_invoices_date - تصدير فواتير بتاريخ محدد\n"
+            f"• /export_items - تصدير كل الأصناف\n"
+            f"• /export_items_date - تصدير أصناف بتاريخ محدد"
         )
     except Exception as e:
         logger.error(f"Failed to show stats: {e}")

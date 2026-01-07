@@ -63,10 +63,33 @@ async def edit_invoice_callback(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "invoice_cancel")
 async def cancel_invoice_callback(callback: CallbackQuery, state: FSMContext):
-    """Cancel invoice without saving."""
+    """Cancel invoice without saving - delete all related messages."""
     await callback.answer("تم الإلغاء")
-    await callback.message.edit_reply_markup(reply_markup=None)
-    await callback.message.reply("❌ تم إلغاء الفاتورة")
+    
+    # Get stored message IDs
+    data = await state.get_data()
+    photo_message_id = data.get("photo_message_id")
+    
+    try:
+        # Delete original photo message
+        if photo_message_id:
+            await callback.bot.delete_message(
+                chat_id=callback.message.chat.id,
+                message_id=photo_message_id
+            )
+        
+        # Delete invoice data message
+        await callback.message.delete()
+        
+        # Send cancellation confirmation
+        await callback.bot.send_message(
+            chat_id=callback.message.chat.id,
+            text="❌ تم إلغاء الفاتورة ومسح جميع الرسائل المتعلقة بها"
+        )
+    except Exception as e:
+        logger.error(f"Failed to delete messages: {e}")
+        await callback.message.reply("❌ تم إلغاء الفاتورة")
+    
     await state.clear()
 
 
@@ -125,17 +148,9 @@ async def edit_discount_callback(callback: CallbackQuery, state: FSMContext):
     await state.set_state(InvoiceStates.editing_discount)
 
 
-@router.callback_query(F.data == "edit_tax")
-async def edit_tax_callback(callback: CallbackQuery, state: FSMContext):
-    """Start editing tax."""
+@router.callback_query(F.data == "edit_tax_rate")
+async def edit_tax_rate_callback(callback: CallbackQuery, state: FSMContext):
+    """Start editing tax rate."""
     await callback.answer()
-    await callback.message.reply("📊 أدخل الضريبة الجديدة:")
-    await state.set_state(InvoiceStates.editing_tax)
-
-
-@router.callback_query(F.data == "edit_total")
-async def edit_total_callback(callback: CallbackQuery, state: FSMContext):
-    """Start editing total."""
-    await callback.answer()
-    await callback.message.reply("💳 أدخل الإجمالي النهائي الجديد:")
-    await state.set_state(InvoiceStates.editing_total)
+    await callback.message.reply("📊 أدخل نسبة الضريبة الجديدة (مثال: 15 لـ 15%):")
+    await state.set_state(InvoiceStates.editing_tax_rate)

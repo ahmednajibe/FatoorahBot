@@ -17,23 +17,23 @@ router = Router()
 
 
 async def update_invoice_display(message: Message, state: FSMContext):
-    """Update invoice display with new data."""
+    """Send new message with updated invoice data."""
     data = await state.get_data()
     invoice = data.get("invoice_data")
-    message_id = data.get("message_id")
     
-    if invoice and message_id:
+    if invoice:
         result_text = format_invoice_result(invoice)
         try:
-            await message.bot.edit_message_text(
-                chat_id=message.chat.id,
-                message_id=message_id,
-                text=result_text,
+            # Send new message with updated data
+            new_msg = await message.answer(
+                result_text,
                 parse_mode="MarkdownV2",
                 reply_markup=get_edit_menu_keyboard()
             )
+            # Update stored message_id to the new message
+            await state.update_data(message_id=new_msg.message_id)
         except Exception as e:
-            logger.error(f"Failed to update message: {e}")
+            logger.error(f"Failed to send updated message: {e}")
 
 
 @router.message(InvoiceStates.editing_supplier)
@@ -132,41 +132,25 @@ async def process_discount_edit(message: Message, state: FSMContext):
         await message.answer("❌ قيمة غير صحيحة. أدخل رقماً صحيحاً.")
 
 
-@router.message(InvoiceStates.editing_tax)
-async def process_tax_edit(message: Message, state: FSMContext):
-    """Process tax edit."""
+
+
+@router.message(InvoiceStates.editing_tax_rate)
+async def process_tax_rate_edit(message: Message, state: FSMContext):
+    """Process tax rate edit."""
     try:
         new_value = float(message.text)
         data = await state.get_data()
         invoice = data.get("invoice_data")
         
         if invoice:
-            invoice.tax_amount = new_value
+            invoice.tax_rate = new_value
             
-            # Recalculate total
+            # Recalculate tax_amount and total
             recalculate_invoice(invoice)
             
             await state.update_data(invoice_data=invoice)
-            await message.answer("✅ تم تحديث الضريبة")
+            await message.answer(f"✅ تم تحديث نسبة الضريبة إلى {new_value}%")
             await update_invoice_display(message, state)
             await state.set_state(InvoiceStates.waiting_confirmation)
     except ValueError:
-        await message.answer("❌ قيمة غير صحيحة. أدخل رقماً صحيحاً.")
-
-
-@router.message(InvoiceStates.editing_total)
-async def process_total_edit(message: Message, state: FSMContext):
-    """Process total edit."""
-    try:
-        new_value = float(message.text)
-        data = await state.get_data()
-        invoice = data.get("invoice_data")
-        
-        if invoice:
-            invoice.total_amount = new_value
-            await state.update_data(invoice_data=invoice)
-            await message.answer("✅ تم تحديث الإجمالي النهائي")
-            await update_invoice_display(message, state)
-            await state.set_state(InvoiceStates.waiting_confirmation)
-    except ValueError:
-        await message.answer("❌ قيمة غير صحيحة. أدخل رقماً صحيحاً.")
+        await message.answer("❌ قيمة غير صحيحة. أدخل رقماً صحيحاً (مثال: 15).")
