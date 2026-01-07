@@ -59,22 +59,65 @@ async def menu_items_callback(callback: CallbackQuery):
 
 @router.callback_query(F.data == "menu_stats")
 async def menu_stats_callback(callback: CallbackQuery):
-    """Show user statistics."""
+    """Show user statistics with export buttons."""
     await callback.answer()
     user_id = callback.from_user.id
     
     try:
         invoice_count = db_service.get_invoice_count(user_id)
+        
+        from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+        export_keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(text="📊 كل الفواتير", callback_data="export_all_invoices"),
+                InlineKeyboardButton(text="📅 فواتير بتاريخ", callback_data="export_invoices_date")
+            ],
+            [
+                InlineKeyboardButton(text="📦 كل الأصناف", callback_data="export_all_items"),
+                InlineKeyboardButton(text="📅 أصناف بتاريخ", callback_data="export_items_date")
+            ],
+            [
+                InlineKeyboardButton(text="🔙 القائمة الرئيسية", callback_data="menu_main")
+            ]
+        ])
+        
         await callback.message.edit_text(
-            f"📈 إحصائياتك\n\n"
-            f"━━━━━━━━━━━━━━━━━━━━\n\n"
-            f"📊 عدد الفواتير المحفوظة: {invoice_count}\n\n"
-            f"━━━━━━━━━━━━━━━━━━━━\n\n"
-            f"📋 الأوامر المتاحة:\n\n"
-            f"    /export_invoices - كل الفواتير\n"
-            f"    /export_items - كل الأصناف\n"
-            f"    /stats - هذه الصفحة",
-            reply_markup=get_main_menu_keyboard()
+            f"📊 إحصائياتك:\n\n"
+            f"عدد الفواتير المحفوظة: {invoice_count}\n\n"
+            f"💡 اختر نوع التقرير:",
+            reply_markup=export_keyboard
+        )
+    except Exception as e:
+        logger.error(f"Failed to show stats: {e}")
+        await callback.message.reply("❌ حدث خطأ")
+
+
+@router.callback_query(F.data == "show_stats")
+async def show_stats_callback(callback: CallbackQuery):
+    """Show stats from save confirmation button."""
+    await callback.answer()
+    user_id = callback.from_user.id
+    
+    try:
+        invoice_count = db_service.get_invoice_count(user_id)
+        
+        from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+        export_keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(text="📊 كل الفواتير", callback_data="export_all_invoices"),
+                InlineKeyboardButton(text="📅 فواتير بتاريخ", callback_data="export_invoices_date")
+            ],
+            [
+                InlineKeyboardButton(text="📦 كل الأصناف", callback_data="export_all_items"),
+                InlineKeyboardButton(text="📅 أصناف بتاريخ", callback_data="export_items_date")
+            ]
+        ])
+        
+        await callback.message.edit_text(
+            f"📊 إحصائياتك:\n\n"
+            f"عدد الفواتير المحفوظة: {invoice_count}\n\n"
+            f"💡 اختر نوع التقرير:",
+            reply_markup=export_keyboard
         )
     except Exception as e:
         logger.error(f"Failed to show stats: {e}")

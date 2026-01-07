@@ -38,12 +38,18 @@ async def save_invoice_callback(callback: CallbackQuery, state: FSMContext):
         user_id = callback.from_user.id
         invoice_id = db_service.save_invoice(user_id, invoice)
         
-        # Remove buttons and add saved message
+        # Create stats button
+        from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+        stats_keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="📊 عرض الإحصائيات والتقارير", callback_data="show_stats")]
+        ])
+        
+        # Remove buttons and add saved message with stats button
         await callback.message.edit_reply_markup(reply_markup=None)
         await callback.message.reply(
             f"✅ تم حفظ الفاتورة بنجاح!\n\n"
-            f"📊 عدد الفواتير المحفوظة: {db_service.get_invoice_count(user_id)}\n\n"
-            f"💡 استخدم /stats لعرض الإحصائيات والتقارير"
+            f"📊 عدد الفواتير المحفوظة: {db_service.get_invoice_count(user_id)}",
+            reply_markup=stats_keyboard
         )
         
         logger.info(f"Invoice {invoice_id} saved for user {user_id}")
