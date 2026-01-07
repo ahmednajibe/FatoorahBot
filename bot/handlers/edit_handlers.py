@@ -1,6 +1,6 @@
 """
 Edit Handlers
-Message handlers for editing invoice fields with complete message tracking
+Message handlers for editing invoice fields - in-place updates
 """
 import logging
 from aiogram import Router, F
@@ -8,41 +8,44 @@ from aiogram.types import Message
 from aiogram.fsm.context import FSMContext
 
 from bot.states.invoice_states import InvoiceStates
-from bot.keyboards.invoice_keyboard import get_invoice_confirmation_keyboard, get_edit_menu_keyboard
+from bot.keyboards.invoice_keyboard import get_edit_menu_keyboard
 from bot.handlers.invoice import format_invoice_result
 from utils.calculations import recalculate_invoice
-from utils.message_tracker import add_related_message
 
 logger = logging.getLogger(__name__)
 router = Router()
 
 
-async def update_invoice_display(message: Message, state: FSMContext):
-    """Send new message with updated invoice data."""
+async def update_invoice_in_place(message: Message, state: FSMContext, success_text: str = "✅ تم التحديث"):
+    """Update the original invoice message in-place."""
     data = await state.get_data()
     invoice = data.get("invoice_data")
-    related_messages = data.get("related_messages", [])
+    message_id = data.get("message_id")
     
-    # Track user's input message
-    related_messages.append(message.message_id)
-    
-    if invoice:
+    if invoice and message_id:
         result_text = format_invoice_result(invoice)
         try:
-            # Send new message with updated data
-            new_msg = await message.answer(
-                result_text,
+            # Edit the original message in-place
+            await message.bot.edit_message_text(
+                chat_id=message.chat.id,
+                message_id=message_id,
+                text=result_text,
                 parse_mode="MarkdownV2",
                 reply_markup=get_edit_menu_keyboard()
             )
-            # Add to related messages and update message_id
-            related_messages.append(new_msg.message_id)
-            await state.update_data(
-                message_id=new_msg.message_id,
-                related_messages=related_messages
-            )
+            
+            # Delete user's input message
+            try:
+                await message.delete()
+            except Exception:
+                pass
+            
+            # Send quick popup confirmation
+            await message.answer(success_text)
+            
         except Exception as e:
-            logger.error(f"Failed to send updated message: {e}")
+            logger.error(f"Failed to update message: {e}")
+            await message.answer("❌ حدث خطأ أثناء التحديث")
 
 
 @router.message(InvoiceStates.editing_supplier)
@@ -54,12 +57,7 @@ async def process_supplier_edit(message: Message, state: FSMContext):
     if invoice:
         invoice.supplier_name = message.text
         await state.update_data(invoice_data=invoice)
-        
-        # Send confirmation and track it
-        confirm_msg = await message.answer("✅ تم تحديث اسم المورد")
-        await add_related_message(state, confirm_msg.message_id)
-        
-        await update_invoice_display(message, state)
+        await update_invoice_in_place(message, state, "✅ تم تحديث اسم المورد")
         await state.set_state(InvoiceStates.waiting_confirmation)
 
 
@@ -72,11 +70,7 @@ async def process_date_edit(message: Message, state: FSMContext):
     if invoice:
         invoice.invoice_date = message.text
         await state.update_data(invoice_data=invoice)
-        
-        confirm_msg = await message.answer("✅ تم تحديث التاريخ")
-        await add_related_message(state, confirm_msg.message_id)
-        
-        await update_invoice_display(message, state)
+        await update_invoice_in_place(message, state, "✅ تم تحديث التاريخ")
         await state.set_state(InvoiceStates.waiting_confirmation)
 
 
@@ -89,11 +83,7 @@ async def process_invoice_num_edit(message: Message, state: FSMContext):
     if invoice:
         invoice.invoice_number = message.text
         await state.update_data(invoice_data=invoice)
-        
-        confirm_msg = await message.answer("✅ تم تحديث رقم الفاتورة")
-        await add_related_message(state, confirm_msg.message_id)
-        
-        await update_invoice_display(message, state)
+        await update_invoice_in_place(message, state, "✅ تم تحديث رقم الفاتورة")
         await state.set_state(InvoiceStates.waiting_confirmation)
 
 
@@ -106,11 +96,7 @@ async def process_tax_num_edit(message: Message, state: FSMContext):
     if invoice:
         invoice.tax_number = message.text
         await state.update_data(invoice_data=invoice)
-        
-        confirm_msg = await message.answer("✅ تم تحديث الرقم الضريبي")
-        await add_related_message(state, confirm_msg.message_id)
-        
-        await update_invoice_display(message, state)
+        await update_invoice_in_place(message, state, "✅ تم تحديث الرقم الضريبي")
         await state.set_state(InvoiceStates.waiting_confirmation)
 
 
@@ -126,15 +112,10 @@ async def process_discount_edit(message: Message, state: FSMContext):
             invoice.discount = new_value
             recalculate_invoice(invoice)
             await state.update_data(invoice_data=invoice)
-            
-            confirm_msg = await message.answer("✅ تم تحديث الخصم")
-            await add_related_message(state, confirm_msg.message_id)
-            
-            await update_invoice_display(message, state)
+            await update_invoice_in_place(message, state, "✅ تم تحديث الخصم")
             await state.set_state(InvoiceStates.waiting_confirmation)
     except ValueError:
-        err_msg = await message.answer("❌ قيمة غير صحيحة. أدخل رقماً صحيحاً.")
-        await add_related_message(state, err_msg.message_id)
+        await message.answer("❌ قيمة غير صحيحة. أدخل رقماً.")
 
 
 @router.message(InvoiceStates.editing_tax_rate)
@@ -149,12 +130,7 @@ async def process_tax_rate_edit(message: Message, state: FSMContext):
             invoice.tax_rate = new_value
             recalculate_invoice(invoice)
             await state.update_data(invoice_data=invoice)
-            
-            confirm_msg = await message.answer(f"✅ تم تحديث نسبة الضريبة إلى {new_value}%")
-            await add_related_message(state, confirm_msg.message_id)
-            
-            await update_invoice_display(message, state)
+            await update_invoice_in_place(message, state, f"✅ تم تحديث الضريبة إلى {new_value}%")
             await state.set_state(InvoiceStates.waiting_confirmation)
     except ValueError:
-        err_msg = await message.answer("❌ قيمة غير صحيحة. أدخل رقماً صحيحاً (مثال: 15).")
-        await add_related_message(state, err_msg.message_id)
+        await message.answer("❌ قيمة غير صحيحة. أدخل رقماً.")

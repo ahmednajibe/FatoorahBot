@@ -64,13 +64,11 @@ async def edit_invoice_callback(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == "invoice_cancel")
 async def cancel_invoice_callback(callback: CallbackQuery, state: FSMContext):
-    """Cancel invoice without saving - delete all related messages."""
+    """Cancel invoice without saving - delete photo and invoice message."""
     await callback.answer("تم الإلغاء")
     
-    # Get stored message IDs
     data = await state.get_data()
     photo_message_id = data.get("photo_message_id")
-    related_messages = data.get("related_messages", [])
     
     try:
         # Delete original photo message
@@ -83,17 +81,7 @@ async def cancel_invoice_callback(callback: CallbackQuery, state: FSMContext):
             except Exception:
                 pass
         
-        # Delete all related messages
-        for msg_id in related_messages:
-            try:
-                await callback.bot.delete_message(
-                    chat_id=callback.message.chat.id,
-                    message_id=msg_id
-                )
-            except Exception:
-                pass
-        
-        # Delete current message if not already deleted
+        # Delete invoice message
         try:
             await callback.message.delete()
         except Exception:
@@ -102,14 +90,10 @@ async def cancel_invoice_callback(callback: CallbackQuery, state: FSMContext):
         # Send cancellation confirmation
         await callback.bot.send_message(
             chat_id=callback.message.chat.id,
-            text="❌ تم إلغاء الفاتورة ومسح جميع الرسائل المتعلقة بها"
+            text="❌ تم إلغاء الفاتورة"
         )
     except Exception as e:
         logger.error(f"Failed to delete messages: {e}")
-        await callback.bot.send_message(
-            chat_id=callback.message.chat.id,
-            text="❌ تم إلغاء الفاتورة"
-        )
     
     await state.clear()
 
