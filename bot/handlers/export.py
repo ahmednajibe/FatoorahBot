@@ -192,20 +192,32 @@ async def export_items_by_date(message: Message, state: FSMContext):
 
 @router.message(Command("stats"))
 async def show_stats(message: Message, state: FSMContext):
-    """Show user statistics."""
+    """Show user statistics with export buttons."""
     user_id = message.from_user.id
     await state.clear()
     
     try:
         invoice_count = db_service.get_invoice_count(user_id)
+        
+        # Create export buttons keyboard
+        from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+        
+        keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [
+                InlineKeyboardButton(text="📊 كل الفواتير", callback_data="export_all_invoices"),
+                InlineKeyboardButton(text="📅 فواتير بتاريخ", callback_data="export_invoices_date")
+            ],
+            [
+                InlineKeyboardButton(text="📦 كل الأصناف", callback_data="export_all_items"),
+                InlineKeyboardButton(text="📅 أصناف بتاريخ", callback_data="export_items_date")
+            ]
+        ])
+        
         await message.answer(
             f"📊 إحصائياتك:\n\n"
             f"عدد الفواتير المحفوظة: {invoice_count}\n\n"
-            f"💡 الأوامر المتاحة:\n"
-            f"• /export_invoices - تصدير كل الفواتير\n"
-            f"• /export_invoices_date - تصدير فواتير بتاريخ محدد\n"
-            f"• /export_items - تصدير كل الأصناف\n"
-            f"• /export_items_date - تصدير أصناف بتاريخ محدد"
+            f"💡 اختر نوع التقرير:",
+            reply_markup=keyboard
         )
     except Exception as e:
         logger.error(f"Failed to show stats: {e}")

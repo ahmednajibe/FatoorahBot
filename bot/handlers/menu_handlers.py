@@ -106,33 +106,31 @@ async def menu_help_callback(callback: CallbackQuery):
 
 @router.callback_query(F.data == "export_all_invoices")
 async def export_all_invoices_callback(callback: CallbackQuery):
-    """Export all invoices."""
-    await callback.answer()
+    """Export all invoices - sends Excel directly."""
+    await callback.answer("⏳ جاري إنشاء التقرير...")
     user_id = callback.from_user.id
     
     try:
         invoices = db_service.get_user_invoices(user_id)
         
         if not invoices:
-            await callback.message.reply("❌ لا توجد فواتير محفوظة")
+            await callback.answer("❌ لا توجد فواتير", show_alert=True)
             return
         
         invoices_list = [dict(inv) for inv in invoices]
-        
-        await callback.message.reply("⏳ جاري إنشاء التقرير...")
         excel_file = export_generator.generate_invoices_report(invoices_list)
         filename = f"invoices_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
         
         await callback.message.answer_document(
             document=BufferedInputFile(excel_file.read(), filename=filename),
-            caption=f"📊 تقرير الفواتير\n\nعدد الفواتير: {len(invoices)}"
+            caption=f"📊 تقرير الفواتير - عدد: {len(invoices)}"
         )
         
-        logger.info(f"User {user_id} exported {len(invoices)} invoices via menu")
+        logger.info(f"User {user_id} exported {len(invoices)} invoices")
         
     except Exception as e:
         logger.error(f"Failed to export invoices: {e}")
-        await callback.message.reply("❌ حدث خطأ أثناء إنشاء التقرير")
+        await callback.answer("❌ حدث خطأ", show_alert=True)
 
 
 @router.callback_query(F.data == "export_invoices_date")
@@ -150,33 +148,31 @@ async def export_invoices_date_callback(callback: CallbackQuery, state: FSMConte
 
 @router.callback_query(F.data == "export_all_items")
 async def export_all_items_callback(callback: CallbackQuery):
-    """Export all items."""
-    await callback.answer()
+    """Export all items - sends Excel directly."""
+    await callback.answer("⏳ جاري إنشاء التقرير...")
     user_id = callback.from_user.id
     
     try:
         items = db_service.get_user_items(user_id)
         
         if not items:
-            await callback.message.reply("❌ لا توجد أصناف محفوظة")
+            await callback.answer("❌ لا توجد أصناف", show_alert=True)
             return
         
         items_list = [dict(item) for item in items]
-        
-        await callback.message.reply("⏳ جاري إنشاء التقرير...")
         excel_file = export_generator.generate_items_report(items_list)
         filename = f"items_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
         
         await callback.message.answer_document(
             document=BufferedInputFile(excel_file.read(), filename=filename),
-            caption=f"📦 تقرير الأصناف\n\nعدد الأصناف: {len(items)}"
+            caption=f"📦 تقرير الأصناف - عدد: {len(items)}"
         )
         
-        logger.info(f"User {user_id} exported {len(items)} items via menu")
+        logger.info(f"User {user_id} exported {len(items)} items")
         
     except Exception as e:
         logger.error(f"Failed to export items: {e}")
-        await callback.message.reply("❌ حدث خطأ أثناء إنشاء التقرير")
+        await callback.answer("❌ حدث خطأ", show_alert=True)
 
 
 @router.callback_query(F.data == "export_items_date")
