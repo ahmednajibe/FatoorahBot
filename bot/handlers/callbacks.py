@@ -13,6 +13,7 @@ from services.excel_generator import excel_generator
 from bot.keyboards.invoice_keyboard import get_edit_menu_keyboard, get_totals_edit_keyboard, get_invoice_confirmation_keyboard
 from bot.states.invoice_states import InvoiceStates
 from models.invoice import InvoiceData
+from utils.message_tracker import add_related_message
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -69,17 +70,34 @@ async def cancel_invoice_callback(callback: CallbackQuery, state: FSMContext):
     # Get stored message IDs
     data = await state.get_data()
     photo_message_id = data.get("photo_message_id")
+    related_messages = data.get("related_messages", [])
     
     try:
         # Delete original photo message
         if photo_message_id:
-            await callback.bot.delete_message(
-                chat_id=callback.message.chat.id,
-                message_id=photo_message_id
-            )
+            try:
+                await callback.bot.delete_message(
+                    chat_id=callback.message.chat.id,
+                    message_id=photo_message_id
+                )
+            except Exception:
+                pass
         
-        # Delete invoice data message
-        await callback.message.delete()
+        # Delete all related messages
+        for msg_id in related_messages:
+            try:
+                await callback.bot.delete_message(
+                    chat_id=callback.message.chat.id,
+                    message_id=msg_id
+                )
+            except Exception:
+                pass
+        
+        # Delete current message if not already deleted
+        try:
+            await callback.message.delete()
+        except Exception:
+            pass
         
         # Send cancellation confirmation
         await callback.bot.send_message(
@@ -88,7 +106,10 @@ async def cancel_invoice_callback(callback: CallbackQuery, state: FSMContext):
         )
     except Exception as e:
         logger.error(f"Failed to delete messages: {e}")
-        await callback.message.reply("❌ تم إلغاء الفاتورة")
+        await callback.bot.send_message(
+            chat_id=callback.message.chat.id,
+            text="❌ تم إلغاء الفاتورة"
+        )
     
     await state.clear()
 
@@ -97,7 +118,8 @@ async def cancel_invoice_callback(callback: CallbackQuery, state: FSMContext):
 async def edit_supplier_callback(callback: CallbackQuery, state: FSMContext):
     """Start editing supplier name."""
     await callback.answer()
-    await callback.message.reply("📝 أدخل اسم المورد الجديد:")
+    msg = await callback.message.reply("📝 أدخل اسم المورد الجديد:")
+    await add_related_message(state, msg.message_id)
     await state.set_state(InvoiceStates.editing_supplier)
 
 
@@ -105,7 +127,8 @@ async def edit_supplier_callback(callback: CallbackQuery, state: FSMContext):
 async def edit_date_callback(callback: CallbackQuery, state: FSMContext):
     """Start editing date."""
     await callback.answer()
-    await callback.message.reply("📅 أدخل التاريخ الجديد (YYYY-MM-DD):")
+    msg = await callback.message.reply("📅 أدخل التاريخ الجديد (YYYY-MM-DD):")
+    await add_related_message(state, msg.message_id)
     await state.set_state(InvoiceStates.editing_date)
 
 
@@ -144,7 +167,8 @@ async def edit_subtotal_callback(callback: CallbackQuery, state: FSMContext):
 async def edit_discount_callback(callback: CallbackQuery, state: FSMContext):
     """Start editing discount."""
     await callback.answer()
-    await callback.message.reply("💵 أدخل الخصم الجديد:")
+    msg = await callback.message.reply("💵 أدخل الخصم الجديد:")
+    await add_related_message(state, msg.message_id)
     await state.set_state(InvoiceStates.editing_discount)
 
 
@@ -152,5 +176,6 @@ async def edit_discount_callback(callback: CallbackQuery, state: FSMContext):
 async def edit_tax_rate_callback(callback: CallbackQuery, state: FSMContext):
     """Start editing tax rate."""
     await callback.answer()
-    await callback.message.reply("📊 أدخل نسبة الضريبة الجديدة (مثال: 15 لـ 15%):")
+    msg = await callback.message.reply("📊 أدخل نسبة الضريبة الجديدة (مثال: 15 لـ 15%):")
+    await add_related_message(state, msg.message_id)
     await state.set_state(InvoiceStates.editing_tax_rate)

@@ -11,6 +11,7 @@ from bot.keyboards.invoice_keyboard import get_items_list_keyboard, get_item_edi
 from bot.states.invoice_states import InvoiceStates
 from bot.handlers.edit_handlers import update_invoice_display
 from utils.calculations import recalculate_invoice
+from utils.message_tracker import add_related_message
 
 logger = logging.getLogger(__name__)
 router = Router()
@@ -28,12 +29,13 @@ async def edit_items_callback(callback: CallbackQuery, state: FSMContext):
         await callback.answer("لا توجد أصناف للتعديل", show_alert=True)
         return
     
-    await callback.message.reply(
+    msg = await callback.message.reply(
         f"📦 *الأصناف \\({len(invoice.items)}\\):*\n\n"
         "اختر الصنف الذي تريد تعديله:",
         parse_mode="MarkdownV2",
         reply_markup=get_items_list_keyboard(len(invoice.items))
     )
+    await add_related_message(state, msg.message_id)
 
 
 @router.callback_query(F.data.startswith("select_item_"))
@@ -51,7 +53,7 @@ async def select_item_callback(callback: CallbackQuery, state: FSMContext):
     
     item = invoice.items[item_index]
     
-    await callback.message.reply(
+    msg = await callback.message.reply(
         f"📦 *الصنف {item_index + 1}:*\n\n"
         f"الاسم: {item.name}\n"
         f"الكمية: {item.quantity}\n"
@@ -60,6 +62,7 @@ async def select_item_callback(callback: CallbackQuery, state: FSMContext):
         f"الإجمالي: {item.total}",
         reply_markup=get_item_edit_keyboard(item_index)
     )
+    await add_related_message(state, msg.message_id)
 
 
 @router.callback_query(F.data.startswith("edit_item_name_"))

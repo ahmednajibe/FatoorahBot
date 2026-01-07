@@ -20,6 +20,7 @@ async def update_invoice_display(message: Message, state: FSMContext):
     """Send new message with updated invoice data."""
     data = await state.get_data()
     invoice = data.get("invoice_data")
+    related_messages = data.get("related_messages", [])
     
     if invoice:
         result_text = format_invoice_result(invoice)
@@ -30,8 +31,12 @@ async def update_invoice_display(message: Message, state: FSMContext):
                 parse_mode="MarkdownV2",
                 reply_markup=get_edit_menu_keyboard()
             )
-            # Update stored message_id to the new message
-            await state.update_data(message_id=new_msg.message_id)
+            # Add to related messages and update message_id
+            related_messages.append(new_msg.message_id)
+            await state.update_data(
+                message_id=new_msg.message_id,
+                related_messages=related_messages
+            )
         except Exception as e:
             logger.error(f"Failed to send updated message: {e}")
 

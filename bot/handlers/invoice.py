@@ -128,7 +128,8 @@ async def handle_photo(message: Message, bot: Bot, state: FSMContext) -> None:
         await state.update_data(
             invoice_data=invoice,
             message_id=processing_msg.message_id,
-            photo_message_id=message.message_id  # Save original photo message ID
+            photo_message_id=message.message_id,  # Save original photo message ID
+            related_messages=[processing_msg.message_id]  # Track all related messages
         )
         
     except Exception as e:
