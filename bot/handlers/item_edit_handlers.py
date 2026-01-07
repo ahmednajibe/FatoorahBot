@@ -1,6 +1,6 @@
 """
 Item Edit Handlers
-Callback and message handlers for editing invoice items
+Callback and message handlers for editing invoice items with complete message tracking
 """
 import logging
 from aiogram import Router, F
@@ -72,8 +72,9 @@ async def edit_item_name_callback(callback: CallbackQuery, state: FSMContext):
     item_index = int(callback.data.split("_")[-1])
     
     await state.update_data(editing_item_index=item_index)
+    msg = await callback.message.reply("📝 ادخل اسم الصنف الجديد:")
+    await add_related_message(state, msg.message_id)
     await state.set_state(InvoiceStates.editing_item_name)
-    await callback.message.reply("📝 ادخل اسم الصنف الجديد:")
 
 
 @router.callback_query(F.data.startswith("edit_item_qty_"))
@@ -83,8 +84,9 @@ async def edit_item_qty_callback(callback: CallbackQuery, state: FSMContext):
     item_index = int(callback.data.split("_")[-1])
     
     await state.update_data(editing_item_index=item_index)
+    msg = await callback.message.reply("📝 ادخل الكمية الجديدة:")
+    await add_related_message(state, msg.message_id)
     await state.set_state(InvoiceStates.editing_item_quantity)
-    await callback.message.reply("📝 ادخل الكمية الجديدة:")
 
 
 @router.callback_query(F.data.startswith("edit_item_unit_"))
@@ -94,8 +96,9 @@ async def edit_item_unit_callback(callback: CallbackQuery, state: FSMContext):
     item_index = int(callback.data.split("_")[-1])
     
     await state.update_data(editing_item_index=item_index)
+    msg = await callback.message.reply("📝 ادخل الوحدة الجديدة:")
+    await add_related_message(state, msg.message_id)
     await state.set_state(InvoiceStates.editing_item_unit)
-    await callback.message.reply("📝 ادخل الوحدة الجديدة:")
 
 
 @router.callback_query(F.data.startswith("edit_item_price_"))
@@ -105,19 +108,9 @@ async def edit_item_price_callback(callback: CallbackQuery, state: FSMContext):
     item_index = int(callback.data.split("_")[-1])
     
     await state.update_data(editing_item_index=item_index)
+    msg = await callback.message.reply("📝 ادخل سعر الوحدة الجديد:")
+    await add_related_message(state, msg.message_id)
     await state.set_state(InvoiceStates.editing_item_price)
-    await callback.message.reply("📝 ادخل سعر الوحدة الجديد:")
-
-
-@router.callback_query(F.data.startswith("edit_item_total_"))
-async def edit_item_total_callback(callback: CallbackQuery, state: FSMContext):
-    """Start editing item total."""
-    await callback.answer()
-    item_index = int(callback.data.split("_")[-1])
-    
-    await state.update_data(editing_item_index=item_index)
-    await state.set_state(InvoiceStates.editing_item_total)
-    await callback.message.reply("📝 ادخل إجمالي الصنف الجديد:")
 
 
 @router.callback_query(F.data.startswith("delete_item_"))
@@ -134,13 +127,12 @@ async def delete_item_callback(callback: CallbackQuery, state: FSMContext):
         return
     
     deleted_item = invoice.items.pop(item_index)
-    
-    # Recalculate totals
     recalculate_invoice(invoice)
-    
     await state.update_data(invoice_data=invoice)
     
-    await callback.message.reply(f"✅ تم حذف الصنف: {deleted_item.name}")
+    msg = await callback.message.reply(f"✅ تم حذف الصنف: {deleted_item.name}")
+    await add_related_message(state, msg.message_id)
+    
     await update_invoice_display(callback.message, state)
     await state.set_state(InvoiceStates.waiting_confirmation)
 
@@ -154,10 +146,16 @@ async def process_item_name_edit(message: Message, state: FSMContext):
     invoice = data.get("invoice_data")
     item_index = data.get("editing_item_index")
     
+    # Track user's input message
+    await add_related_message(state, message.message_id)
+    
     if invoice and item_index is not None and item_index < len(invoice.items):
         invoice.items[item_index].name = message.text
         await state.update_data(invoice_data=invoice)
-        await message.answer("✅ تم تحديث اسم الصنف")
+        
+        confirm_msg = await message.answer("✅ تم تحديث اسم الصنف")
+        await add_related_message(state, confirm_msg.message_id)
+        
         await update_invoice_display(message, state)
         await state.set_state(InvoiceStates.waiting_confirmation)
 
@@ -165,6 +163,9 @@ async def process_item_name_edit(message: Message, state: FSMContext):
 @router.message(InvoiceStates.editing_item_quantity)
 async def process_item_qty_edit(message: Message, state: FSMContext):
     """Process item quantity edit."""
+    # Track user's input message
+    await add_related_message(state, message.message_id)
+    
     try:
         new_value = float(message.text)
         data = await state.get_data()
@@ -173,16 +174,17 @@ async def process_item_qty_edit(message: Message, state: FSMContext):
         
         if invoice and item_index is not None and item_index < len(invoice.items):
             invoice.items[item_index].quantity = new_value
-            
-            # Recalculate totals
             recalculate_invoice(invoice)
-            
             await state.update_data(invoice_data=invoice)
-            await message.answer("✅ تم تحديث الكمية")
+            
+            confirm_msg = await message.answer("✅ تم تحديث الكمية")
+            await add_related_message(state, confirm_msg.message_id)
+            
             await update_invoice_display(message, state)
             await state.set_state(InvoiceStates.waiting_confirmation)
     except ValueError:
-        await message.answer("❌ قيمة غير صحيحة. أدخل رقماً صحيحاً.")
+        err_msg = await message.answer("❌ قيمة غير صحيحة. أدخل رقماً صحيحاً.")
+        await add_related_message(state, err_msg.message_id)
 
 
 @router.message(InvoiceStates.editing_item_unit)
@@ -192,10 +194,16 @@ async def process_item_unit_edit(message: Message, state: FSMContext):
     invoice = data.get("invoice_data")
     item_index = data.get("editing_item_index")
     
+    # Track user's input message
+    await add_related_message(state, message.message_id)
+    
     if invoice and item_index is not None and item_index < len(invoice.items):
         invoice.items[item_index].unit = message.text
         await state.update_data(invoice_data=invoice)
-        await message.answer("✅ تم تحديث الوحدة")
+        
+        confirm_msg = await message.answer("✅ تم تحديث الوحدة")
+        await add_related_message(state, confirm_msg.message_id)
+        
         await update_invoice_display(message, state)
         await state.set_state(InvoiceStates.waiting_confirmation)
 
@@ -203,6 +211,9 @@ async def process_item_unit_edit(message: Message, state: FSMContext):
 @router.message(InvoiceStates.editing_item_price)
 async def process_item_price_edit(message: Message, state: FSMContext):
     """Process item price edit."""
+    # Track user's input message
+    await add_related_message(state, message.message_id)
+    
     try:
         new_value = float(message.text)
         data = await state.get_data()
@@ -211,32 +222,14 @@ async def process_item_price_edit(message: Message, state: FSMContext):
         
         if invoice and item_index is not None and item_index < len(invoice.items):
             invoice.items[item_index].unit_price = new_value
-            
-            # Recalculate totals
             recalculate_invoice(invoice)
+            await state.update_data(invoice_data=invoice)
             
-            await state.update_data(invoice_data=invoice)
-            await message.answer("✅ تم تحديث سعر الوحدة")
+            confirm_msg = await message.answer("✅ تم تحديث سعر الوحدة")
+            await add_related_message(state, confirm_msg.message_id)
+            
             await update_invoice_display(message, state)
             await state.set_state(InvoiceStates.waiting_confirmation)
     except ValueError:
-        await message.answer("❌ قيمة غير صحيحة. أدخل رقماً صحيحاً.")
-
-
-@router.message(InvoiceStates.editing_item_total)
-async def process_item_total_edit(message: Message, state: FSMContext):
-    """Process item total edit."""
-    try:
-        new_value = float(message.text)
-        data = await state.get_data()
-        invoice = data.get("invoice_data")
-        item_index = data.get("editing_item_index")
-        
-        if invoice and item_index is not None and item_index < len(invoice.items):
-            invoice.items[item_index].total = new_value
-            await state.update_data(invoice_data=invoice)
-            await message.answer("✅ تم تحديث إجمالي الصنف")
-            await update_invoice_display(message, state)
-            await state.set_state(InvoiceStates.waiting_confirmation)
-    except ValueError:
-        await message.answer("❌ قيمة غير صحيحة. أدخل رقماً صحيحاً.")
+        err_msg = await message.answer("❌ قيمة غير صحيحة. أدخل رقماً صحيحاً.")
+        await add_related_message(state, err_msg.message_id)
