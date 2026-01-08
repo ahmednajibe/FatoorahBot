@@ -94,34 +94,23 @@ async def menu_stats_callback(callback: CallbackQuery):
 
 @router.callback_query(F.data == "show_stats")
 async def show_stats_callback(callback: CallbackQuery):
-    """Show stats from save confirmation button."""
+    """Show stats from save confirmation - only change buttons, keep message."""
     await callback.answer()
-    user_id = callback.from_user.id
     
-    try:
-        invoice_count = db_service.get_invoice_count(user_id)
-        
-        from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-        export_keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [
-                InlineKeyboardButton(text="📊 كل الفواتير", callback_data="export_all_invoices"),
-                InlineKeyboardButton(text="📅 فواتير بتاريخ", callback_data="export_invoices_date")
-            ],
-            [
-                InlineKeyboardButton(text="📦 كل الأصناف", callback_data="export_all_items"),
-                InlineKeyboardButton(text="📅 أصناف بتاريخ", callback_data="export_items_date")
-            ]
-        ])
-        
-        await callback.message.edit_text(
-            f"📊 إحصائياتك:\n\n"
-            f"عدد الفواتير المحفوظة: {invoice_count}\n\n"
-            f"💡 اختر نوع التقرير:",
-            reply_markup=export_keyboard
-        )
-    except Exception as e:
-        logger.error(f"Failed to show stats: {e}")
-        await callback.message.reply("❌ حدث خطأ")
+    from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+    export_keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="📊 كل الفواتير", callback_data="export_all_invoices"),
+            InlineKeyboardButton(text="📅 فواتير بتاريخ", callback_data="export_invoices_date")
+        ],
+        [
+            InlineKeyboardButton(text="📦 كل الأصناف", callback_data="export_all_items"),
+            InlineKeyboardButton(text="📅 أصناف بتاريخ", callback_data="export_items_date")
+        ]
+    ])
+    
+    # Only change buttons, don't change message text
+    await callback.message.edit_reply_markup(reply_markup=export_keyboard)
 
 
 @router.callback_query(F.data == "menu_help")
