@@ -17,10 +17,12 @@ router = Router()
 
 
 async def update_invoice_in_place(message: Message, state: FSMContext, success_text: str = "✅ تم التحديث"):
-    """Update the original invoice message in-place."""
+    """Update the original invoice message in-place and delete prompt."""
     data = await state.get_data()
     invoice = data.get("invoice_data")
     message_id = data.get("message_id")
+    prompt_message_id = data.get("prompt_message_id")
+    confirmation_messages = data.get("confirmation_messages", [])
     
     if invoice and message_id:
         result_text = format_invoice_result(invoice)
@@ -40,8 +42,23 @@ async def update_invoice_in_place(message: Message, state: FSMContext, success_t
             except Exception:
                 pass
             
-            # Send quick popup confirmation
-            await message.answer(success_text)
+            # Delete prompt message (like "📝 ادخل الكمية الجديدة:")
+            if prompt_message_id:
+                try:
+                    await message.bot.delete_message(
+                        chat_id=message.chat.id,
+                        message_id=prompt_message_id
+                    )
+                except Exception:
+                    pass
+            
+            # Send confirmation and track it for deletion on save
+            confirm_msg = await message.answer(success_text)
+            confirmation_messages.append(confirm_msg.message_id)
+            await state.update_data(
+                prompt_message_id=None,
+                confirmation_messages=confirmation_messages
+            )
             
         except Exception as e:
             logger.error(f"Failed to update message: {e}")

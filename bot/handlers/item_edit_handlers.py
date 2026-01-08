@@ -97,8 +97,8 @@ async def edit_item_name_callback(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
     item_index = int(callback.data.split("_")[-1])
     
-    await state.update_data(editing_item_index=item_index)
-    await callback.message.answer("📝 ادخل اسم الصنف الجديد:")
+    msg = await callback.message.answer("📝 ادخل اسم الصنف الجديد:")
+    await state.update_data(editing_item_index=item_index, prompt_message_id=msg.message_id)
     await state.set_state(InvoiceStates.editing_item_name)
 
 
@@ -108,8 +108,8 @@ async def edit_item_qty_callback(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
     item_index = int(callback.data.split("_")[-1])
     
-    await state.update_data(editing_item_index=item_index)
-    await callback.message.answer("📝 ادخل الكمية الجديدة:")
+    msg = await callback.message.answer("📝 ادخل الكمية الجديدة:")
+    await state.update_data(editing_item_index=item_index, prompt_message_id=msg.message_id)
     await state.set_state(InvoiceStates.editing_item_quantity)
 
 
@@ -119,8 +119,8 @@ async def edit_item_unit_callback(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
     item_index = int(callback.data.split("_")[-1])
     
-    await state.update_data(editing_item_index=item_index)
-    await callback.message.answer("📝 ادخل الوحدة الجديدة:")
+    msg = await callback.message.answer("📝 ادخل الوحدة الجديدة:")
+    await state.update_data(editing_item_index=item_index, prompt_message_id=msg.message_id)
     await state.set_state(InvoiceStates.editing_item_unit)
 
 
@@ -130,8 +130,8 @@ async def edit_item_price_callback(callback: CallbackQuery, state: FSMContext):
     await callback.answer()
     item_index = int(callback.data.split("_")[-1])
     
-    await state.update_data(editing_item_index=item_index)
-    await callback.message.answer("📝 ادخل سعر الوحدة الجديد:")
+    msg = await callback.message.answer("📝 ادخل سعر الوحدة الجديد:")
+    await state.update_data(editing_item_index=item_index, prompt_message_id=msg.message_id)
     await state.set_state(InvoiceStates.editing_item_price)
 
 

@@ -38,15 +38,38 @@ async def save_invoice_callback(callback: CallbackQuery, state: FSMContext):
         user_id = callback.from_user.id
         invoice_id = db_service.save_invoice(user_id, invoice)
         
+        # Get messages to delete
+        photo_message_id = data.get("photo_message_id")
+        confirmation_messages = data.get("confirmation_messages", [])
+        
+        # Delete photo message
+        if photo_message_id:
+            try:
+                await callback.bot.delete_message(
+                    chat_id=callback.message.chat.id,
+                    message_id=photo_message_id
+                )
+            except Exception:
+                pass
+        
+        # Delete all confirmation messages ("✅ تم التحديث")
+        for msg_id in confirmation_messages:
+            try:
+                await callback.bot.delete_message(
+                    chat_id=callback.message.chat.id,
+                    message_id=msg_id
+                )
+            except Exception:
+                pass
+        
         # Create stats button
         from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
         stats_keyboard = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="📊 عرض الإحصائيات والتقارير", callback_data="show_stats")]
         ])
         
-        # Remove buttons and add saved message with stats button
-        await callback.message.edit_reply_markup(reply_markup=None)
-        await callback.message.reply(
+        # Update the original invoice message with stats button
+        await callback.message.edit_text(
             f"✅ تم حفظ الفاتورة بنجاح!\n\n"
             f"📊 عدد الفواتير المحفوظة: {db_service.get_invoice_count(user_id)}",
             reply_markup=stats_keyboard
@@ -109,7 +132,7 @@ async def edit_supplier_callback(callback: CallbackQuery, state: FSMContext):
     """Start editing supplier name."""
     await callback.answer()
     msg = await callback.message.reply("📝 أدخل اسم المورد الجديد:")
-    await add_related_message(state, msg.message_id)
+    await state.update_data(prompt_message_id=msg.message_id)
     await state.set_state(InvoiceStates.editing_supplier)
 
 
@@ -118,7 +141,7 @@ async def edit_date_callback(callback: CallbackQuery, state: FSMContext):
     """Start editing date."""
     await callback.answer()
     msg = await callback.message.reply("📅 أدخل التاريخ الجديد (YYYY-MM-DD):")
-    await add_related_message(state, msg.message_id)
+    await state.update_data(prompt_message_id=msg.message_id)
     await state.set_state(InvoiceStates.editing_date)
 
 
@@ -126,7 +149,8 @@ async def edit_date_callback(callback: CallbackQuery, state: FSMContext):
 async def edit_invoice_num_callback(callback: CallbackQuery, state: FSMContext):
     """Start editing invoice number."""
     await callback.answer()
-    await callback.message.reply("📄 أدخل رقم الفاتورة الجديد:")
+    msg = await callback.message.reply("📄 أدخل رقم الفاتورة الجديد:")
+    await state.update_data(prompt_message_id=msg.message_id)
     await state.set_state(InvoiceStates.editing_invoice_number)
 
 
@@ -134,7 +158,8 @@ async def edit_invoice_num_callback(callback: CallbackQuery, state: FSMContext):
 async def edit_tax_num_callback(callback: CallbackQuery, state: FSMContext):
     """Start editing tax number."""
     await callback.answer()
-    await callback.message.reply("🔢 أدخل الرقم الضريبي الجديد:")
+    msg = await callback.message.reply("🔢 أدخل الرقم الضريبي الجديد:")
+    await state.update_data(prompt_message_id=msg.message_id)
     await state.set_state(InvoiceStates.editing_tax_number)
 
 
@@ -149,7 +174,8 @@ async def edit_totals_callback(callback: CallbackQuery, state: FSMContext):
 async def edit_subtotal_callback(callback: CallbackQuery, state: FSMContext):
     """Start editing subtotal."""
     await callback.answer()
-    await callback.message.reply("💰 أدخل المجموع الفرعي الجديد:")
+    msg = await callback.message.reply("💰 أدخل المجموع الفرعي الجديد:")
+    await state.update_data(prompt_message_id=msg.message_id)
     await state.set_state(InvoiceStates.editing_subtotal)
 
 
@@ -158,7 +184,7 @@ async def edit_discount_callback(callback: CallbackQuery, state: FSMContext):
     """Start editing discount."""
     await callback.answer()
     msg = await callback.message.reply("💵 أدخل الخصم الجديد:")
-    await add_related_message(state, msg.message_id)
+    await state.update_data(prompt_message_id=msg.message_id)
     await state.set_state(InvoiceStates.editing_discount)
 
 
@@ -167,5 +193,5 @@ async def edit_tax_rate_callback(callback: CallbackQuery, state: FSMContext):
     """Start editing tax rate."""
     await callback.answer()
     msg = await callback.message.reply("📊 أدخل نسبة الضريبة الجديدة (مثال: 15 لـ 15%):")
-    await add_related_message(state, msg.message_id)
+    await state.update_data(prompt_message_id=msg.message_id)
     await state.set_state(InvoiceStates.editing_tax_rate)
