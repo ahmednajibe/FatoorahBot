@@ -27,6 +27,7 @@ async def save_invoice_callback(callback: CallbackQuery, state: FSMContext):
     # Get stored invoice data
     data = await state.get_data()
     invoice = data.get("invoice_data")
+    photo_message_id = data.get("photo_message_id")
     
     if not invoice:
         await callback.message.edit_text("❌ خطأ: لم يتم العثور على بيانات الفاتورة")
@@ -38,11 +39,24 @@ async def save_invoice_callback(callback: CallbackQuery, state: FSMContext):
         user_id = callback.from_user.id
         invoice_id = db_service.save_invoice(user_id, invoice)
         
-        # Get messages to delete
-        photo_message_id = data.get("photo_message_id")
-        confirmation_messages = data.get("confirmation_messages", [])
+        # Create stats button
+        from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+        stats_keyboard = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="📊 عرض الإحصائيات والتقارير", callback_data="show_stats")]
+        ])
         
-        # Delete photo message
+        # Update original invoice message with save confirmation
+        from bot.handlers.invoice import format_invoice_result
+        result_text = format_invoice_result(invoice)
+        saved_text = result_text + "\n\n✅ *تم حفظ الفاتورة بنجاح\\!*"
+        
+        await callback.message.edit_text(
+            saved_text,
+            parse_mode="MarkdownV2",
+            reply_markup=stats_keyboard
+        )
+        
+        # Delete original photo message
         if photo_message_id:
             try:
                 await callback.bot.delete_message(
@@ -51,29 +65,6 @@ async def save_invoice_callback(callback: CallbackQuery, state: FSMContext):
                 )
             except Exception:
                 pass
-        
-        # Delete all confirmation messages ("✅ تم التحديث")
-        for msg_id in confirmation_messages:
-            try:
-                await callback.bot.delete_message(
-                    chat_id=callback.message.chat.id,
-                    message_id=msg_id
-                )
-            except Exception:
-                pass
-        
-        # Create stats button
-        from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
-        stats_keyboard = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="📊 عرض الإحصائيات والتقارير", callback_data="show_stats")]
-        ])
-        
-        # Update the original invoice message with stats button
-        await callback.message.edit_text(
-            f"✅ تم حفظ الفاتورة بنجاح!\n\n"
-            f"📊 عدد الفواتير المحفوظة: {db_service.get_invoice_count(user_id)}",
-            reply_markup=stats_keyboard
-        )
         
         logger.info(f"Invoice {invoice_id} saved for user {user_id}")
         

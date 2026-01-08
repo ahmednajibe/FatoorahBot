@@ -17,10 +17,11 @@ router = Router()
 
 
 async def update_invoice_in_place(message: Message, state: FSMContext, success_text: str = "✅ تم التحديث"):
-    """Update the original invoice message in-place."""
+    """Update the original invoice message in-place and clean up."""
     data = await state.get_data()
     invoice = data.get("invoice_data")
     message_id = data.get("message_id")
+    prompt_message_id = data.get("prompt_message_id")
     
     if invoice and message_id:
         result_text = format_invoice_result(invoice)
@@ -39,6 +40,16 @@ async def update_invoice_in_place(message: Message, state: FSMContext, success_t
                 await message.delete()
             except Exception:
                 pass
+            
+            # Delete prompt message
+            if prompt_message_id:
+                try:
+                    await message.bot.delete_message(
+                        chat_id=message.chat.id,
+                        message_id=prompt_message_id
+                    )
+                except Exception:
+                    pass
             
             # Send quick confirmation
             await message.answer(success_text)
