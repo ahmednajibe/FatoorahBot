@@ -11,7 +11,8 @@ from aiogram.fsm.context import FSMContext
 from services.ocr_service import ocr_service
 from services.validator import validator
 from services.excel_generator import excel_generator
-from bot.keyboards.invoice_keyboard import get_invoice_confirmation_keyboard, get_edit_menu_keyboard, get_totals_edit_keyboard
+from services.database import db_service
+from bot.keyboards.invoice_keyboard import get_invoice_confirmation_keyboard, get_edit_menu_keyboard, get_totals_edit_keyboard, get_duplicate_warning_keyboard
 from bot.states.invoice_states import InvoiceStates
 
 logger = logging.getLogger(__name__)
@@ -115,22 +116,52 @@ async def handle_photo(message: Message, bot: Bot, state: FSMContext) -> None:
         # Validate calculations (only if we have items)
         validator.validate(invoice)
         
-        # Format and send result with confirmation buttons
-        result_text = format_invoice_result(invoice)
-        await processing_msg.edit_text(
-            result_text,
-            parse_mode="MarkdownV2",
-            reply_markup=get_invoice_confirmation_keyboard()
+        # Check for duplicate invoice
+        user_id = message.from_user.id
+        is_duplicate = db_service.check_duplicate_invoice(
+            user_id,
+            invoice.invoice_number,
+            invoice.tax_number
         )
         
-        # Store invoice data in state for later use
-        await state.set_state(InvoiceStates.waiting_confirmation)
-        await state.update_data(
-            invoice_data=invoice,
-            message_id=processing_msg.message_id,
-            photo_message_id=message.message_id,  # Save original photo message ID
-            related_messages=[processing_msg.message_id]  # Track all related messages
-        )
+        if is_duplicate:
+            # Show duplicate warning
+            escaped_num = invoice.invoice_number or "غير محدد"
+            for char in ['_', '*', '[', ']', '(', ')', '~', '`', '>', '#', '+', '-', '=', '|', '{', '}', '.', '!']:
+                escaped_num = str(escaped_num).replace(char, f'\\{char}')
+            
+            await processing_msg.edit_text(
+                f"⚠️ *هذه الفاتورة مسجلة من قبل\\!*\n\n"
+                f"📄 رقم الفاتورة: {escaped_num}\n\n"
+                f"هل تريد المتابعة على أي حال؟",
+                parse_mode="MarkdownV2",
+                reply_markup=get_duplicate_warning_keyboard()
+            )
+            
+            # Store invoice data for later use
+            await state.set_state(InvoiceStates.waiting_confirmation)
+            await state.update_data(
+                invoice_data=invoice,
+                message_id=processing_msg.message_id,
+                photo_message_id=message.message_id,
+                is_duplicate=True
+            )
+        else:
+            # Normal flow - show invoice data
+            result_text = format_invoice_result(invoice)
+            await processing_msg.edit_text(
+                result_text,
+                parse_mode="MarkdownV2",
+                reply_markup=get_invoice_confirmation_keyboard()
+            )
+            
+            # Store invoice data in state for later use
+            await state.set_state(InvoiceStates.waiting_confirmation)
+            await state.update_data(
+                invoice_data=invoice,
+                message_id=processing_msg.message_id,
+                photo_message_id=message.message_id
+            )
         
     except Exception as e:
         logger.error(f"Error processing photo: {e}")

@@ -18,6 +18,16 @@ def get_invoice_confirmation_keyboard() -> InlineKeyboardMarkup:
     ])
 
 
+def get_duplicate_warning_keyboard() -> InlineKeyboardMarkup:
+    """Keyboard for duplicate invoice warning."""
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="✅ متابعة على أي حال", callback_data="duplicate_continue"),
+            InlineKeyboardButton(text="❌ إلغاء", callback_data="duplicate_cancel")
+        ]
+    ])
+
+
 def get_edit_menu_keyboard() -> InlineKeyboardMarkup:
     """Keyboard for edit menu."""
     return InlineKeyboardMarkup(inline_keyboard=[

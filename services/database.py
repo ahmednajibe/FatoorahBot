@@ -241,6 +241,31 @@ class DatabaseService:
         count = cursor.fetchone()[0]
         conn.close()
         return count
+    
+    def check_duplicate_invoice(self, user_id: int, invoice_number: str, tax_number: str) -> bool:
+        """
+        Check if invoice already exists based on invoice_number + tax_number.
+        
+        Args:
+            user_id: Telegram user ID
+            invoice_number: Invoice number
+            tax_number: Tax number (VAT number)
+            
+        Returns:
+            True if duplicate exists, False otherwise
+        """
+        if not invoice_number or not tax_number:
+            return False
+        
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT COUNT(*) FROM invoices 
+            WHERE user_id = ? AND invoice_number = ? AND tax_number = ?
+        """, (user_id, invoice_number, tax_number))
+        count = cursor.fetchone()[0]
+        conn.close()
+        return count > 0
 
 
 # Global instance

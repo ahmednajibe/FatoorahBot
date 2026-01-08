@@ -129,6 +129,62 @@ async def cancel_invoice_callback(callback: CallbackQuery, state: FSMContext):
     await state.clear()
 
 
+@router.callback_query(F.data == "duplicate_continue")
+async def duplicate_continue_callback(callback: CallbackQuery, state: FSMContext):
+    """Continue with duplicate invoice - show invoice data."""
+    await callback.answer()
+    
+    data = await state.get_data()
+    invoice = data.get("invoice_data")
+    
+    if invoice:
+        # Import here to avoid circular import
+        from bot.handlers.invoice import format_invoice_result
+        
+        result_text = format_invoice_result(invoice)
+        await callback.message.edit_text(
+            result_text,
+            parse_mode="MarkdownV2",
+            reply_markup=get_invoice_confirmation_keyboard()
+        )
+
+
+@router.callback_query(F.data == "duplicate_cancel")
+async def duplicate_cancel_callback(callback: CallbackQuery, state: FSMContext):
+    """Cancel duplicate invoice - delete photo and message."""
+    await callback.answer("تم الإلغاء")
+    
+    data = await state.get_data()
+    photo_message_id = data.get("photo_message_id")
+    
+    try:
+        # Delete original photo message
+        if photo_message_id:
+            try:
+                await callback.bot.delete_message(
+                    chat_id=callback.message.chat.id,
+                    message_id=photo_message_id
+                )
+            except Exception:
+                pass
+        
+        # Delete warning message
+        try:
+            await callback.message.delete()
+        except Exception:
+            pass
+        
+        # Send cancellation confirmation
+        await callback.bot.send_message(
+            chat_id=callback.message.chat.id,
+            text="❌ تم إلغاء الفاتورة"
+        )
+    except Exception as e:
+        logger.error(f"Failed to delete messages: {e}")
+    
+    await state.clear()
+
+
 @router.callback_query(F.data == "edit_supplier")
 async def edit_supplier_callback(callback: CallbackQuery, state: FSMContext):
     """Start editing supplier name."""
