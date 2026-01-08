@@ -51,8 +51,13 @@ async def update_invoice_in_place(message: Message, state: FSMContext, success_t
                 except Exception:
                     pass
             
-            # Send quick popup confirmation
-            await message.answer(success_text)
+            # Send confirmation and track it for deletion on save
+            confirm_msg = await message.answer(success_text)
+            
+            # Add confirmation message to list for cleanup on save
+            confirmation_messages = data.get("confirmation_messages", [])
+            confirmation_messages.append(confirm_msg.message_id)
+            await state.update_data(confirmation_messages=confirmation_messages)
             
         except Exception as e:
             logger.error(f"Failed to update message: {e}")

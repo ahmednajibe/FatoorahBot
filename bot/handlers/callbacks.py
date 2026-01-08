@@ -28,6 +28,7 @@ async def save_invoice_callback(callback: CallbackQuery, state: FSMContext):
     data = await state.get_data()
     invoice = data.get("invoice_data")
     photo_message_id = data.get("photo_message_id")
+    confirmation_messages = data.get("confirmation_messages", [])
     
     if not invoice:
         await callback.message.edit_text("❌ خطأ: لم يتم العثور على بيانات الفاتورة")
@@ -62,6 +63,16 @@ async def save_invoice_callback(callback: CallbackQuery, state: FSMContext):
                 await callback.bot.delete_message(
                     chat_id=callback.message.chat.id,
                     message_id=photo_message_id
+                )
+            except Exception:
+                pass
+        
+        # Delete all confirmation messages (تم التحديث messages)
+        for msg_id in confirmation_messages:
+            try:
+                await callback.bot.delete_message(
+                    chat_id=callback.message.chat.id,
+                    message_id=msg_id
                 )
             except Exception:
                 pass
