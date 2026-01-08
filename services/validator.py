@@ -31,10 +31,9 @@ class ValidationService:
             (is_valid, message)
         """
         try:
-            # Calculate items total
+            # Sum item totals (extracted from invoice, not calculated)
             calculated_subtotal = sum(
-                item.unit_price * item.quantity 
-                for item in invoice.items
+                item.total for item in invoice.items
             )
             
             # Calculate expected total (subtotal - discount + tax)
